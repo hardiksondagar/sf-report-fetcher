@@ -41,8 +41,6 @@ class SalesforceReportFetcher:
             dict: Complete report metadata
         """
         url = f"{self.instance_url}{self.base_api_path}/{report_id}/describe"
-        print(self.headers)
-        print(url)
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
@@ -114,7 +112,7 @@ class SalesforceReportFetcher:
         # Get initial report
         initial_response = self.get_metadata(report_id)
         metadata = initial_response['reportMetadata']
-        print(metadata)
+
         # Get column names
         columns = [detail for detail in metadata['detailColumns']]
 
