@@ -1,7 +1,6 @@
 import requests
 import functools
 from typing import Dict, List, Tuple, Optional
-import urllib.parse
 
 
 class SalesforceReportFetcher:
@@ -42,6 +41,8 @@ class SalesforceReportFetcher:
             dict: Complete report metadata
         """
         url = f"{self.instance_url}{self.base_api_path}/{report_id}/describe"
+        print(self.headers)
+        print(url)
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
@@ -111,42 +112,39 @@ class SalesforceReportFetcher:
             return metadata
 
         # Get initial report
-        initial_response = self.execute_report(report_id)
+        initial_response = self.get_metadata(report_id)
         metadata = initial_response['reportMetadata']
-        
+        print(metadata)
         # Get column names
-        columns = [detail['label'] for detail in metadata['detailColumns']]
-        
+        columns = [detail for detail in metadata['detailColumns']]
+
         # Store all rows
         all_rows = []
         id_column_index = columns.index(id_column)
-        
+
         while True:
             response = self.execute_report(report_id, metadata)
-            
-            # Extract the factMap data
-            fact_map = response['factMap']
-            if not fact_map:
-                break
-                
+
+            # IMPORTANT: This data path only true for reportType=TABULAR, for summary and matrix reports, this will be different
+            # TODO: Handle summary and matrix reports
+
             # Process rows
-            for key in fact_map:
-                data_rows = fact_map[key]['dataRows']
-                for data_row in data_rows:
-                    row = [cell['label'] for cell in data_row['dataCells']]
-                    all_rows.append(row)
-            
+            data_rows = response['factMap']["T!T"]["rows"]
+            for data_row in data_rows:
+                row = [cell['label'] for cell in data_row['dataCells']]
+                all_rows.append(row)
+
             if not all_rows:
                 break
-            
+
             # Update metadata with new filter value
             last_value = all_rows[-1][id_column_index]
             metadata = update_metadata(metadata, last_value)
-            
+
             # Check if we've got all data
             if response.get('allData', False):
                 break
-        
+
         return columns, all_rows
 
 
